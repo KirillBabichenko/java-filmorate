@@ -7,20 +7,28 @@ import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FilmControllerTest {
-    FilmController filmController;
-    Film film;
+    private FilmController filmController;
+    private Film film;
+    private Validator validator;
 
     @BeforeEach
     public void setUp() {
         filmController = new FilmController();
         film = new Film("nisi eiusmod", "adipisicing", LocalDate.of(1967, 3, 25), 100);
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
     }
 
     @Test
@@ -35,18 +43,16 @@ public class FilmControllerTest {
     public void createFilmFailNameTest() {
         Film badFilm = new Film("", "adipisicing", LocalDate.of(1967, 3, 25), 100);
 
-        Assertions.assertThrows(ValidationException.class,
-                () -> filmController.createFilm(badFilm));
-        assertEquals(0, filmController.getFilms().size(), "Количество фильмов не совпадает");
+        Set<ConstraintViolation<Film>> violations = validator.validate(badFilm);
+        assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
     public void createFilmFailDescriptionTest() {
         Film badFilm = new Film("Film", "Пятеро друзей ( комик-группа «Шарло»), приезжают в город Бризуль. Здесь они хотят разыскать господина Огюста Куглова, который задолжал им деньги, а именно 20 миллионов. о Куглов, который за время «своего отсутствия», стал кандидатом Коломбани.", LocalDate.of(1967, 3, 25), 100);
 
-        Assertions.assertThrows(ValidationException.class,
-                () -> filmController.createFilm(badFilm));
-        assertEquals(0, filmController.getFilms().size(), "Количество фильмов не совпадает");
+        Set<ConstraintViolation<Film>> violations = validator.validate(badFilm);
+        assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
@@ -62,14 +68,13 @@ public class FilmControllerTest {
     public void createFilmFailDurationTest() {
         Film badFilm = new Film("Film", "Description", LocalDate.of(1925, 3, 25), -100);
 
-        Assertions.assertThrows(ValidationException.class,
-                () -> filmController.createFilm(badFilm));
-        assertEquals(0, filmController.getFilms().size(), "Количество фильмов не совпадает");
+        Set<ConstraintViolation<Film>> violations = validator.validate(badFilm);
+        assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
     public void updateFilmNormalTest() {
-        Film updateFilm = new Film( "Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
+        Film updateFilm = new Film("Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
         updateFilm.setId(1);
         filmController.createFilm(film);
         filmController.updateFilm(updateFilm);
@@ -80,7 +85,7 @@ public class FilmControllerTest {
 
     @Test
     public void updateUnknownFilmFailTest() {
-        Film updateFilm = new Film( "Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
+        Film updateFilm = new Film("Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
         updateFilm.setId(9999);
         filmController.createFilm(film);
 

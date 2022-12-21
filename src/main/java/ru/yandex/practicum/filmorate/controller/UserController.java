@@ -8,8 +8,9 @@ import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
-import java.util.*;
+import javax.validation.Valid;
+import java.util.Collection;
+import java.util.HashMap;
 
 @Getter
 @Setter
@@ -19,41 +20,41 @@ public class UserController {
     private int idUser = 1;
     private final HashMap<Integer, User> users = new HashMap<>();
 
-    private User validateUser(User user) {
-        if (user.getEmail().isBlank()) {
+    private User validUser(User user) {
+   /*     if (user.getEmail().isBlank()) {
             log.info("Ошибка с электронной почтой. Она пуста- {}", user);
             throw new ValidationException("Электронная почта не может быть пустой");
         }
         if (!user.getEmail().contains("@")) {
             log.info("Ошибка с электронной почтой. Нет символа @ - {}", user);
             throw new ValidationException("Электронная почта должна содержать символ @");
-        }
-        if (user.getLogin().isBlank() || user.getLogin().contains(" ")) {
+        }*/
+        if (user.getLogin().contains(" ")) {
             log.info("Ошибка с логином. - {}", user);
             throw new ValidationException("Логин не может быть пустым или содержать пробелы");
         }
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
         }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
+    /*    if (user.getBirthday().isAfter(LocalDate.now())) {
             log.info("Ошибка с датой рождения - {}", user);
             throw new ValidationException("Дата рождения не может быть в будущем");
-        }
+        }*/
         return user;
     }
 
     @PostMapping("/users")
-    public User createUser(@RequestBody User user) {
-        User validateUser = validateUser(user);
+    public User createUser(@Valid @RequestBody User user) {
+        User validateUser = validUser(user);
         validateUser.setId(idUser);
         users.put(idUser++, validateUser);
         return validateUser;
     }
 
     @PutMapping("/users")
-    public User updateUser(@RequestBody User user) {
+    public User updateUser(@Valid @RequestBody User user) {
         if (users.containsKey(user.getId())) {
-            User validateUser = validateUser(user);
+            User validateUser = validUser(user);
             users.put(validateUser.getId(), validateUser);
             return validateUser;
         } else {

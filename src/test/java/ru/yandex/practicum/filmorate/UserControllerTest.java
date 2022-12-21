@@ -3,19 +3,25 @@ package ru.yandex.practicum.filmorate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class UserControllerTest {
-    UserController userController;
-    User user;
+    private UserController userController;
+    private User user;
+    private Validator validator;
 
     @BeforeEach
     public void setUp() {
@@ -26,6 +32,8 @@ public class UserControllerTest {
                 .email("mail@mail.ru")
                 .birthday(LocalDate.of(1946, 8, 20))
                 .build();
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
     }
 
     @Test
@@ -59,9 +67,8 @@ public class UserControllerTest {
                 .birthday(LocalDate.of(1946, 8, 20))
                 .build();
 
-        Assertions.assertThrows(ValidationException.class,
-                () -> userController.createUser(badUser));
-        assertEquals(0, userController.getUsers().size(), "Количество пользователей не совпадает");
+        Set<ConstraintViolation<User>> violations = validator.validate(badUser);
+        assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
@@ -85,9 +92,9 @@ public class UserControllerTest {
                 .email("mailmail.ru")
                 .birthday(LocalDate.of(1946, 8, 20))
                 .build();
-        Assertions.assertThrows(ValidationException.class,
-                () -> userController.createUser(badUser));
-        assertEquals(0, userController.getUsers().size(), "Количество пользователей не совпадает");
+
+        Set<ConstraintViolation<User>> violations = validator.validate(badUser);
+        assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
@@ -98,9 +105,9 @@ public class UserControllerTest {
                 .email("mail@mail.ru")
                 .birthday(LocalDate.of(2946, 8, 20))
                 .build();
-        Assertions.assertThrows(ValidationException.class,
-                () -> userController.createUser(badUser));
-        assertEquals(0, userController.getUsers().size(), "Количество пользователей не совпадает");
+
+        Set<ConstraintViolation<User>> violations = validator.validate(badUser);
+        assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
