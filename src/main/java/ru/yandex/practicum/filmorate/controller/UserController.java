@@ -21,14 +21,6 @@ public class UserController {
     private final HashMap<Integer, User> users = new HashMap<>();
 
     private User validUser(User user) {
-   /*     if (user.getEmail().isBlank()) {
-            log.info("Ошибка с электронной почтой. Она пуста- {}", user);
-            throw new ValidationException("Электронная почта не может быть пустой");
-        }
-        if (!user.getEmail().contains("@")) {
-            log.info("Ошибка с электронной почтой. Нет символа @ - {}", user);
-            throw new ValidationException("Электронная почта должна содержать символ @");
-        }*/
         if (user.getLogin().contains(" ")) {
             log.info("Ошибка с логином. - {}", user);
             throw new ValidationException("Логин не может быть пустым или содержать пробелы");
@@ -36,10 +28,6 @@ public class UserController {
         if (user.getName() == null || user.getName().isEmpty()) {
             user.setName(user.getLogin());
         }
-    /*    if (user.getBirthday().isAfter(LocalDate.now())) {
-            log.info("Ошибка с датой рождения - {}", user);
-            throw new ValidationException("Дата рождения не может быть в будущем");
-        }*/
         return user;
     }
 
