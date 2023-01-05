@@ -2,56 +2,81 @@ package ru.yandex.practicum.filmorate.controller;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
 import javax.validation.Valid;
 import java.util.Collection;
-import java.util.HashMap;
 
 @Getter
 @Setter
 @RestController
 public class UserController {
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
-    private int idUser = 1;
-    private final HashMap<Integer, User> users = new HashMap<>();
+    private InMemoryUserStorage inMemoryUserStorage;
+    private UserService userService;
 
-    private User validUser(User user) {
-        if (user.getLogin().contains(" ")) {
-            log.info("Ошибка с логином. - {}", user);
-            throw new ValidationException("Логин не может быть пустым или содержать пробелы");
-        }
-        if (user.getName() == null || user.getName().isEmpty()) {
-            user.setName(user.getLogin());
-        }
-        return user;
+    @Autowired
+    public UserController(InMemoryUserStorage inMemoryUserStorage, UserService userService) {
+        this.inMemoryUserStorage = inMemoryUserStorage;
+        this.userService = userService;
     }
 
     @PostMapping("/users")
     public User createUser(@Valid @RequestBody User user) {
-        User validateUser = validUser(user);
-        validateUser.setId(idUser);
-        users.put(idUser++, validateUser);
-        return validateUser;
+        return inMemoryUserStorage.createUser(user);
     }
 
     @PutMapping("/users")
     public User updateUser(@Valid @RequestBody User user) {
-        if (users.containsKey(user.getId())) {
-            User validateUser = validUser(user);
-            users.put(validateUser.getId(), validateUser);
-            return validateUser;
-        } else {
-            throw new ValidationException("Пользователя с таким id нет.");
-        }
+        return inMemoryUserStorage.updateUser(user);
     }
 
     @GetMapping("/users")
     public Collection<User> getAllUsers() {
-        return users.values();
+        return inMemoryUserStorage.getAllUsers();
+    }
+
+    @GetMapping("/users/{id}")
+    public User getUserById(@PathVariable Long id) {
+        checkForPositivity(id);
+        return inMemoryUserStorage.getUserById(id);
+    }
+
+    @PutMapping("/users/{id}/friends/{friendId}")
+    public User addFriend(@PathVariable Long id, @PathVariable Long friendId) {
+        checkForPositivity(id);
+        checkForPositivity(friendId);
+        return userService.addFriend(id, friendId);
+    }
+
+    @DeleteMapping("/users/{id}/friends/{friendId}")
+    public User deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
+        checkForPositivity(id);
+        checkForPositivity(friendId);
+        return userService.deleteFriend(id, friendId);
+    }
+
+    @GetMapping("/users/{id}/friends")
+    public Collection<User> getFriends(@PathVariable Long id) {
+        checkForPositivity(id);
+        return userService.getFriends(id);
+    }
+
+    @GetMapping("/users/{id}/friends/common/{otherId}")
+    public Collection<User> getCommonFriends(@PathVariable Long id, @PathVariable Long otherId) {
+        checkForPositivity(id);
+        checkForPositivity(otherId);
+        return userService.getCommonFriends(id, otherId);
+    }
+
+    private void checkForPositivity(Long id) {
+        if (id <= 0) {
+            throw new IncorrectParameterException("Некорректно указан параметр " + id + ". Должен быть больше нуля.");
+        }
     }
 }
