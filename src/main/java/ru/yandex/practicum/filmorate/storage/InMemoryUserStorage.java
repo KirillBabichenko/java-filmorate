@@ -23,9 +23,7 @@ public class InMemoryUserStorage implements UserStorage {
     public User createUser(User user) {
         User validateUser = validUser(user);
         validateUser.setId(idUser);
-        System.out.println(idUser);
         users.put(idUser++, validateUser);
-        System.out.println(idUser);
         return validateUser;
     }
 

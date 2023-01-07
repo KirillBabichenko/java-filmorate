@@ -1,22 +1,21 @@
 package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
 import ru.yandex.practicum.filmorate.exception.MissingFriendException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
     private final InMemoryUserStorage inMemoryUserStorage;
-
-    @Autowired
-    public UserService(InMemoryUserStorage inMemoryUserStorage) {
-        this.inMemoryUserStorage = inMemoryUserStorage;
-    }
 
     public User addFriend(Long id, Long idFriend) {
         if (inMemoryUserStorage.getUsers().get(id) == null) {
@@ -31,7 +30,7 @@ public class UserService {
     }
 
     public User deleteFriend(Long id, Long idFriend) {
-        if (!(inMemoryUserStorage.getUsers().get(id).getFriends().contains(idFriend))) {
+        if (!inMemoryUserStorage.getUsers().get(id).getFriends().contains(idFriend)) {
             throw new MissingFriendException(String.format(
                     "Ошибка. У пользователя %s нет друга - %s", inMemoryUserStorage.getUsers().get(id).getName(),
                     inMemoryUserStorage.getUsers().get(idFriend).getName()));
@@ -54,5 +53,11 @@ public class UserService {
         return userFriends.stream()
                 .map(idUser -> inMemoryUserStorage.getUsers().get(idUser))
                 .collect(Collectors.toList());
+    }
+
+    public void checkForPositivity(Long id) {
+        if (id <= 0) {
+            throw new IncorrectParameterException("Некорректно указан параметр " + id + ". Должен быть больше нуля.");
+        }
     }
 }
