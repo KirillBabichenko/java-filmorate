@@ -1,6 +1,9 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Positive;
@@ -10,6 +13,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@RequiredArgsConstructor
+@AllArgsConstructor
+@Builder
 @Data
 public class Film {
     private Long id;
@@ -20,14 +26,8 @@ public class Film {
     private LocalDate releaseDate;
     @Positive(message = "Длительность должна быть положительной")
     private int duration;
+    @Builder.Default
     private Set<Long> likes = new HashSet<>();
-  //  private List<String> genre;
-  //  private String rating;
-
-    public Film(String name, String description, LocalDate releaseDate, int duration) {
-        this.name = name;
-        this.description = description;
-        this.releaseDate = releaseDate;
-        this.duration = duration;
-    }
+    private Mpa mpa;
+    private List<Genre> genres;
 }

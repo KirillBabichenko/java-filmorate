@@ -2,7 +2,6 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 
@@ -31,17 +30,5 @@ public class FilmService {
                 .sorted(Collections.reverseOrder(Comparator.comparingInt(film -> film.getLikes().size())))
                 .limit(amount)
                 .collect(Collectors.toList());
-    }
-
-    public void checkForPositivity(Long id) {
-        if (id <= 0) {
-            throw new IncorrectParameterException("Некорректно указан параметр - " + id + ". Должен быть больше нуля.");
-        }
-    }
-
-    public void checkForPositivityCount(Integer count) {
-        if (count <= 0) {
-            throw new IncorrectParameterException("Некорректно указан параметр - " + count + ". Должен быть больше нуля.");
-        }
     }
 }
