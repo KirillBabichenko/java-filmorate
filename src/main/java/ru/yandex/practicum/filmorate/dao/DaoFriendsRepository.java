@@ -11,7 +11,7 @@ import java.util.Collection;
 @RequiredArgsConstructor
 public class DaoFriendsRepository implements DaoFriends {
     private final JdbcTemplate jdbcTemplate;
-    private final DaoUserRepository daoUserRepository;
+    private final CreationAssistant creationAssistant;
 
     @Override
     public void addFriend(Long id, Long friendId) {
@@ -42,7 +42,7 @@ public class DaoFriendsRepository implements DaoFriends {
         String sql = "SELECT * FROM Users WHERE id_user IN " +
                 "(SELECT id_friends FROM friends WHERE id_user = ?)" +
                 "OR id_user IN (SELECT id_friends FROM unverified_friends WHERE id_user = ?)";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> daoUserRepository.createUser(rs), id, id);
+        return jdbcTemplate.query(sql, (rs, rowNum) -> creationAssistant.createUser(rs), id, id);
     }
 
     @Override
@@ -55,6 +55,6 @@ public class DaoFriendsRepository implements DaoFriends {
                 "JOIN friends AS f ON u.id_user = f.id_friends WHERE f.id_user = ? " +
                 "UNION SELECT u.ID_USER, u.LOGIN, u.NAME, u.EMAIL, u.BIRTHDAY_DATE FROM users AS u " +
                 "JOIN unverified_friends AS uf ON u.id_user = uf.id_friends WHERE uf.id_user = ?)";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> daoUserRepository.createUser(rs), id, id, otherId, otherId);
+        return jdbcTemplate.query(sql, (rs, rowNum) -> creationAssistant.createUser(rs), id, id, otherId, otherId);
     }
 }

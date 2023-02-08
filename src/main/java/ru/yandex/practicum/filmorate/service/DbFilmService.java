@@ -3,11 +3,11 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.dao.DaoFilmRepository;
-import ru.yandex.practicum.filmorate.dao.DaoLikeRepository;
+import ru.yandex.practicum.filmorate.dao.DaoLike;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
@@ -21,41 +21,41 @@ import static ru.yandex.practicum.filmorate.validation.PositivityChecker.checkFo
 @RequiredArgsConstructor
 public class DbFilmService implements FilmServiceInt {
     private final LocalDate startDate = LocalDate.of(1895, Month.DECEMBER, 28);
-    private final DaoFilmRepository daoFilmRepository;
-    private final DaoLikeRepository daoLikeRepository;
+    private final FilmStorage filmStorage;
+    private final DaoLike daoLike;
 
     @Override
     public Film saveFilm(Film film) {
         Film validateFilm = validateFilm(film);
-        return daoFilmRepository.saveFilm(validateFilm).orElseThrow(() ->
+        return filmStorage.saveFilm(validateFilm).orElseThrow(() ->
                 new DatabaseException("При записи фильма в базу данных произошла ошибка"));
     }
 
     @Override
     public Film updateFilm(Film film) {
         Film validateFilm = validateFilm(film);
-        return daoFilmRepository.updateFilm(validateFilm).orElseThrow(() ->
+        return filmStorage.updateFilm(validateFilm).orElseThrow(() ->
                 new DatabaseException("При обновлении фильма в базе данных произошла ошибка"));
     }
 
     @Override
     public Film getFilmById(Long id) {
         checkForPositivity(id);
-        return daoFilmRepository.getFilmById(id).orElseThrow(() ->
+        return filmStorage.getFilmById(id).orElseThrow(() ->
                 new DatabaseException("При запросе фильма в базе данных произошла ошибка." +
                         " Фильма с таким айди нет в базе"));
     }
 
     @Override
     public Collection<Film> getAllFilms() {
-        return daoFilmRepository.getAllFilms();
+        return filmStorage.getAllFilms();
     }
 
     @Override
     public boolean addLike(Long idFilm, Long idUser) {
         checkForPositivity(idFilm);
         checkForPositivity(idUser);
-        if (!daoLikeRepository.addLike(idFilm, idUser)) {
+        if (!daoLike.addLike(idFilm, idUser)) {
             throw new DatabaseException("При добавлении лайка произошла ошибка.");
         }
         return true;
@@ -64,14 +64,14 @@ public class DbFilmService implements FilmServiceInt {
     @Override
     public Collection<Film> getPopularFilms(Integer amount) {
         checkForPositivityCount(amount);
-        return daoLikeRepository.getPopularFilms(amount);
+        return daoLike.getPopularFilms(amount);
     }
 
     @Override
     public boolean deleteLike(Long id, Long userId) {
         checkForPositivity(id);
         checkForPositivity(userId);
-        if (!daoLikeRepository.deleteLike(id, userId)) {
+        if (!daoLike.deleteLike(id, userId)) {
             throw new DatabaseException("При удалении лайка произошла ошибка.");
         }
         return true;

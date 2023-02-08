@@ -2,27 +2,27 @@ package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
-import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Primary
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class DaoFilmRepository implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
+    private final CreationAssistant creationAssistant;
 
     @Override
     public Optional<Film> saveFilm(Film film) {
@@ -39,7 +39,7 @@ public class DaoFilmRepository implements FilmStorage {
 
     public Optional<Film> getFilmById(Long id) {
         String sql = "SELECT * FROM (Film AS f LEFT JOIN rating AS r ON f.id_rating = r.id_rating) WHERE id_film = ?";
-        List<Film> film = jdbcTemplate.query(sql, (rs, rowNum) -> createFilm(rs), id);
+        List<Film> film = jdbcTemplate.query(sql, (rs, rowNum) -> creationAssistant.createFilm(rs), id);
         if (film.isEmpty()) {
             return Optional.empty();
         }
@@ -48,7 +48,7 @@ public class DaoFilmRepository implements FilmStorage {
 
     public List<Film> getAllFilms() {
         String sql = "SELECT * FROM (Film AS f LEFT JOIN rating AS r ON f.id_rating = r.id_rating)";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> createFilm(rs));
+        return jdbcTemplate.query(sql, (rs, rowNum) -> creationAssistant.createFilm(rs));
     }
 
     public Optional<Film> updateFilm(Film film) {
@@ -90,31 +90,6 @@ public class DaoFilmRepository implements FilmStorage {
         genreMap.put("id_film", id);
         genreMap.put("id_genre", genre.getId());
         return genreMap;
-    }
-
-    Film createFilm(ResultSet rs) throws SQLException {
-        Long id = rs.getLong("id_film");
-        List<Genre> genre = getGenre(id);
-        return Film.builder()
-                .id(id)
-                .name(rs.getString("name"))
-                .description(rs.getString("description"))
-                .releaseDate(rs.getDate("release_date").toLocalDate())
-                .duration(rs.getInt("duration"))
-                .mpa(new Mpa(rs.getInt("id_rating"), rs.getString("rating_name")))
-                .genres(genre)
-                .build();
-    }
-
-    private List<Genre> getGenre(Long idFilm) {
-        String sql = "SELECT g.id_genre, fg.genre_name FROM " +
-                "(genre AS g JOIN film_genre AS fg ON g.id_genre = fg.id_genre) WHERE id_film = ?" +
-                "GROUP BY g.id_genre ORDER BY g.id_genre";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> createGenre(rs), idFilm);
-    }
-
-    private Genre createGenre(ResultSet rs) throws SQLException {
-        return new Genre(rs.getInt("id_genre"), rs.getString("genre_name"));
     }
 
     private Map<String, Object> filmToMap(Film film) {

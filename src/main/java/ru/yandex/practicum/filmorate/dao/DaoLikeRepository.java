@@ -11,7 +11,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DaoLikeRepository implements DaoLike {
     private final JdbcTemplate jdbcTemplate;
-    private final DaoFilmRepository daoFilmRepository;
+    private final CreationAssistant creationAssistant;
 
     @Override
     public boolean addLike(Long idFilm, Long idUser) {
@@ -31,6 +31,6 @@ public class DaoLikeRepository implements DaoLike {
                 "FROM Film AS f LEFT JOIN Likes AS L ON f.ID_FILM = l.ID_FILM " +
                 "LEFT JOIN rating AS r ON f.id_rating = r.id_rating " +
                 "GROUP BY f.id_film ORDER BY COUNT (l.id_user) DESC LIMIT ?;";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> daoFilmRepository.createFilm(rs), amount);
+        return jdbcTemplate.query(sql, (rs, rowNum) -> creationAssistant.createFilm(rs), amount);
     }
 }

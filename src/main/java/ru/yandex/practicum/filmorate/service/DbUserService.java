@@ -3,12 +3,12 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.dao.DaoFriendsRepository;
-import ru.yandex.practicum.filmorate.dao.DaoUserRepository;
+import ru.yandex.practicum.filmorate.dao.DaoFriends;
 import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.MissingFriendException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -19,28 +19,28 @@ import static ru.yandex.practicum.filmorate.validation.PositivityChecker.checkFo
 @Service
 @RequiredArgsConstructor
 public class DbUserService implements UserServiceInt {
-    private final DaoUserRepository daoUserRepository;
-    private final DaoFriendsRepository daoFriendsRepository;
+    private final UserStorage userStorage;
+    private final DaoFriends daoFriends;
 
     @Override
     public User saveUser(User user) {
         User validateUser = validUser(user);
-        return daoUserRepository.saveUser(validateUser).orElseThrow(() ->
+        return userStorage.saveUser(validateUser).orElseThrow(() ->
                 new DatabaseException("При записи пользователя в базу данных произошла ошибка"));
     }
 
     @Override
     public User getUserById(Long id) {
         checkForPositivity(id);
-        return daoUserRepository.getUserById(id).orElseThrow(() ->
+        return userStorage.getUserById(id).orElseThrow(() ->
                 new DatabaseException("Пользователь в базе данных не найден"));
     }
 
     @Override
     public User updateUser(User user) {
-        Optional<User> checkUser = daoUserRepository.getUserById(user.getId());
+        Optional<User> checkUser = userStorage.getUserById(user.getId());
         if (checkUser.isPresent()) {
-            return daoUserRepository.updateUser(user).orElseThrow(() ->
+            return userStorage.updateUser(user).orElseThrow(() ->
                     new DatabaseException("Произошла ошибка при обновлении пользователя"));
         } else {
             log.info("Ошибка нет пользователя для обновления");
@@ -50,7 +50,7 @@ public class DbUserService implements UserServiceInt {
 
     @Override
     public Collection<User> getAllUsers() {
-        return daoUserRepository.getAllUsers();
+        return userStorage.getAllUsers();
     }
 
     @Override
@@ -63,24 +63,24 @@ public class DbUserService implements UserServiceInt {
             return user;
         }
         if (friend.getUnverifiedFriends().contains(id)) {
-            daoFriendsRepository.deleteUnverifiedFriend(friendId, id);
-            daoFriendsRepository.addFriend(friendId, id);
-            daoFriendsRepository.addFriend(id, friendId);
-        } else daoFriendsRepository.addUnverifiedFriend(id, friendId);
+            daoFriends.deleteUnverifiedFriend(friendId, id);
+            daoFriends.addFriend(friendId, id);
+            daoFriends.addFriend(id, friendId);
+        } else daoFriends.addUnverifiedFriend(id, friendId);
         return getUserById(id);
     }
 
     @Override
     public Collection<User> getFriends(Long id) {
         checkForPositivity(id);
-        return daoFriendsRepository.getFriends(id);
+        return daoFriends.getFriends(id);
     }
 
     @Override
     public Collection<User> getCommonFriends(Long id, Long otherId) {
         checkForPositivity(id);
         checkForPositivity(otherId);
-        return daoFriendsRepository.getCommonFriends(id, otherId);
+        return daoFriends.getCommonFriends(id, otherId);
     }
 
     @Override
@@ -92,11 +92,11 @@ public class DbUserService implements UserServiceInt {
                     "Ошибка. У пользователя %s нет друга - %s", user.getName(), friend.getName()));
         }
         if (user.getFriends().contains(friendId)) {
-            daoFriendsRepository.deleteFriend(id, friendId);
-            daoFriendsRepository.deleteFriend(friendId, id);
-            daoFriendsRepository.addUnverifiedFriend(friendId, id);
+            daoFriends.deleteFriend(id, friendId);
+            daoFriends.deleteFriend(friendId, id);
+            daoFriends.addUnverifiedFriend(friendId, id);
         } else {
-            daoFriendsRepository.deleteUnverifiedFriend(id, friendId);
+            daoFriends.deleteUnverifiedFriend(id, friendId);
         }
         return getUserById(id);
     }
