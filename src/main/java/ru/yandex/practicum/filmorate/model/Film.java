@@ -3,7 +3,6 @@ package ru.yandex.practicum.filmorate.model;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Positive;
@@ -13,10 +12,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@RequiredArgsConstructor
-@AllArgsConstructor
-@Builder
 @Data
+@Builder
+@AllArgsConstructor
 public class Film {
     private Long id;
     @NotBlank(message = "Название не может быть пустым")

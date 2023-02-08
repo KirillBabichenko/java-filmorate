@@ -14,6 +14,7 @@ import java.time.Month;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Data
 @Component
@@ -24,19 +25,19 @@ public class InMemoryFilmStorage implements FilmStorage {
     private final Map<Long, Film> films = new HashMap<>();
 
     @Override
-    public Film createFilm(Film film) {
+    public Optional<Film> saveFilm(Film film) {
         Film validateFilm = validateFilm(film);
         validateFilm.setId(idFilm);
         films.put(idFilm++, validateFilm);
-        return validateFilm;
+        return Optional.of(validateFilm);
     }
 
     @Override
-    public Film updateFilm(Film film) {
+    public Optional<Film> updateFilm(Film film) {
         if (films.containsKey(film.getId())) {
             Film validateFilm = validateFilm(film);
             films.put(validateFilm.getId(), validateFilm);
-            return validateFilm;
+            return Optional.of(validateFilm);
         } else {
             throw new MissingFilmException("Фильма с таким id нет.");
         }
@@ -48,12 +49,12 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Film getFilmById(Long id) {
+    public Optional<Film> getFilmById(Long id) {
         if (films.get(id) == null) {
             throw new MissingFilmException(String.format(
                     "Ошибка. Фильма с id - %s не найдено.", id));
         }
-        return films.get(id);
+        return Optional.of(films.get(id));
     }
 
     private Film validateFilm(Film film) {

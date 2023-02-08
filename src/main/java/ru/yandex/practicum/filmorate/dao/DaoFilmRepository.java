@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,7 +21,7 @@ import java.util.Optional;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class DaoFilmService implements DaoFilm {
+public class DaoFilmRepository implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -48,24 +49,6 @@ public class DaoFilmService implements DaoFilm {
     public List<Film> getAllFilms() {
         String sql = "SELECT * FROM (Film AS f LEFT JOIN rating AS r ON f.id_rating = r.id_rating)";
         return jdbcTemplate.query(sql, (rs, rowNum) -> createFilm(rs));
-    }
-
-    public boolean addLike(Long idFilm, Long idUser) {
-        String sql = "INSERT INTO Likes (id_film, id_user) values (?, ?);";
-        return jdbcTemplate.update(sql, idFilm, idUser) > 0;
-    }
-
-    public boolean deleteLike(Long id, Long userId) {
-        String sqlQuery = "DELETE FROM Likes where id_film = ? AND id_user = ?";
-        return jdbcTemplate.update(sqlQuery, id, userId) > 0;
-    }
-
-    public List<Film> getPopularFilms(Integer amount) {
-        String sql = "SELECT f.ID_FILM, f.NAME, f.DESCRIPTION, f.RELEASE_DATE , f.DURATION, f.ID_RATING, r.rating_name " +
-                "FROM Film AS f LEFT JOIN Likes AS L ON f.ID_FILM = l.ID_FILM " +
-                "LEFT JOIN rating AS r ON f.id_rating = r.id_rating " +
-                "GROUP BY f.id_film ORDER BY COUNT (l.id_user) DESC LIMIT ?;";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> createFilm(rs), amount);
     }
 
     public Optional<Film> updateFilm(Film film) {
@@ -109,7 +92,7 @@ public class DaoFilmService implements DaoFilm {
         return genreMap;
     }
 
-    private Film createFilm(ResultSet rs) throws SQLException {
+    Film createFilm(ResultSet rs) throws SQLException {
         Long id = rs.getLong("id_film");
         List<Genre> genre = getGenre(id);
         return Film.builder()

@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import ru.yandex.practicum.filmorate.dao.DaoMpaService;
+import ru.yandex.practicum.filmorate.dao.DaoMpaRepository;
 import ru.yandex.practicum.filmorate.model.Mpa;
 
 import java.util.Collection;
@@ -19,11 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class MpaDaoTest {
-    private final DaoMpaService daoMpaService;
+    private final DaoMpaRepository daoMpaRepository;
 
     @Test
     public void getMpaByIdTest() {
-        Optional<Mpa> mpaOptional = daoMpaService.getMpaById(1L);
+        Optional<Mpa> mpaOptional = daoMpaRepository.getMpaById(1L);
         assertThat(mpaOptional)
                 .isPresent()
                 .hasValueSatisfying(mpa ->
@@ -41,7 +41,7 @@ public class MpaDaoTest {
         Mpa mpa3 = new Mpa(3, "PG-13");
         Mpa mpa4 = new Mpa(4, "R");
         Mpa mpa5 = new Mpa(5, "NC-17");
-        Collection<Mpa> allMpa = daoMpaService.getAllMpa();
+        Collection<Mpa> allMpa = daoMpaRepository.getAllMpa();
         assertThat(allMpa)
                 .isNotEmpty()
                 .hasSize(5)

@@ -11,6 +11,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Новая реализация класса используется в классе DbFilmService для работы с базой данных
+ * @see DbUserService
+ */
+
 @Service
 @RequiredArgsConstructor
 public class UserService {

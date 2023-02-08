@@ -10,6 +10,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.stream.Collectors;
 
+/**
+ * Новая реализация класса используется в классе DbFilmService для работы с базой данных
+ * @see DbFilmService
+ */
+
 @Service
 @RequiredArgsConstructor
 public class FilmService {

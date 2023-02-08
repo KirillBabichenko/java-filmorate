@@ -1,11 +1,11 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,12 +17,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-@Slf4j
 @Repository
 @RequiredArgsConstructor
-public class DaoUserService implements DaoUser {
+public class DaoUserRepository implements UserStorage {
     private final JdbcTemplate jdbcTemplate;
 
+    @Override
     public Optional<User> saveUser(User user) {
         SimpleJdbcInsert simpleJdbcInsert = new SimpleJdbcInsert(jdbcTemplate)
                 .withTableName("Users")
@@ -31,6 +31,7 @@ public class DaoUserService implements DaoUser {
         return getUserById(idUser);
     }
 
+    @Override
     public Optional<User> getUserById(Long id) {
         String sql = "SELECT * FROM Users WHERE id_user = ?";
         List<User> users = jdbcTemplate.query(sql, (rs, rowNum) -> createUser(rs), id);
@@ -40,52 +41,17 @@ public class DaoUserService implements DaoUser {
         return Optional.ofNullable(users.get(0));
     }
 
-
+    @Override
     public Optional<User> updateUser(User user) {
-        String sql = "UPDATE Users SET login = ?, name = ?, email = ?, birthday_date = ?";
-        jdbcTemplate.update(sql, user.getLogin(), user.getName(), user.getEmail(), user.getBirthday());
+        String sql = "UPDATE Users SET login = ?, name = ?, email = ?, birthday_date = ? WHERE id_user = ?";
+        jdbcTemplate.update(sql, user.getLogin(), user.getName(), user.getEmail(), user.getBirthday(), user.getId());
         return getUserById(user.getId());
     }
 
+    @Override
     public Collection<User> getAllUsers() {
         String sql = "SELECT * FROM Users";
         return jdbcTemplate.query(sql, (rs, rowNum) -> createUser(rs));
-    }
-
-    public void addFriend(Long id, Long friendId) {
-        String sqlQuery = "INSERT INTO friends (id_user, id_friends) values (?, ?)";
-        jdbcTemplate.update(sqlQuery, id, friendId);
-    }
-
-    public void addUnverifiedFriend(Long id, Long friendId) {
-        String sqlQuery = "INSERT INTO unverified_friends (id_user, id_friends) values (?, ?)";
-        jdbcTemplate.update(sqlQuery, id, friendId);
-    }
-
-    public void deleteFriend(Long id, Long friendId) {
-        String sqlQuery = "DELETE FROM friends WHERE id_user = ? AND id_friends = ?";
-        jdbcTemplate.update(sqlQuery, id, friendId);
-    }
-
-    public void deleteUnverifiedFriend(Long id, Long friendId) {
-        String sqlQuery = "DELETE FROM unverified_friends WHERE id_user = ? AND id_friends = ?";
-        jdbcTemplate.update(sqlQuery, id, friendId);
-    }
-
-    public Collection<User> getFriends(Long id) {
-        String sql = "SELECT * FROM Users WHERE id_user IN " +
-                "(SELECT id_friends FROM friends WHERE id_user = ?)" +
-                "OR id_user IN (SELECT id_friends FROM unverified_friends WHERE id_user = ?)";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> createUser(rs), id, id);
-    }
-
-    public Collection<User> getCommonFriends(Long id, Long otherId) {
-        String sql = "SELECT * FROM Users WHERE id_user IN (SELECT id_friends FROM " +
-                "((SELECT id_friends FROM friends WHERE id_user = ?) " +
-                "UNION (SELECT id_friends FROM unverified_friends WHERE id_user = ?)) AS friends_1 " +
-                "INTERSECT SELECT id_friends FROM ((SELECT id_friends FROM friends WHERE id_user = ?) " +
-                "UNION (SELECT id_friends FROM unverified_friends WHERE id_user = ?)) AS friends_2);";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> createUser(rs), id, id, otherId, otherId);
     }
 
     private Map<String, Object> userToMap(User user) {
@@ -97,7 +63,7 @@ public class DaoUserService implements DaoUser {
         return userMap;
     }
 
-    private User createUser(ResultSet rs) throws SQLException {
+    User createUser(ResultSet rs) throws SQLException {
         Long id = rs.getLong("id_user");
         return User.builder()
                 .id(id)

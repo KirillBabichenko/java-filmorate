@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import ru.yandex.practicum.filmorate.dao.DaoGenreService;
+import ru.yandex.practicum.filmorate.dao.DaoGenreRepository;
 import ru.yandex.practicum.filmorate.model.Genre;
 
 import java.util.Collection;
@@ -19,11 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class GenreDaoTest {
-    private final DaoGenreService daoGenreService;
+    private final DaoGenreRepository daoGenreRepository;
 
     @Test
     public void getGenreByIdTest() {
-        Optional<Genre> genreOptional = daoGenreService.getGenreById(1L);
+        Optional<Genre> genreOptional = daoGenreRepository.getGenreById(1L);
         assertThat(genreOptional)
                 .isPresent()
                 .hasValueSatisfying(genre ->
@@ -42,7 +42,7 @@ public class GenreDaoTest {
         Genre genre4 = new Genre(4, "Триллер");
         Genre genre5 = new Genre(5, "Документальный");
         Genre genre6 = new Genre(6, "Боевик");
-        Collection<Genre> allGenre = daoGenreService.getAllGenres();
+        Collection<Genre> allGenre = daoGenreRepository.getAllGenres();
         assertThat(allGenre)
                 .isNotEmpty()
                 .hasSize(6)

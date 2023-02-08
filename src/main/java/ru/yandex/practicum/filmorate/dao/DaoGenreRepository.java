@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.dao;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.Genre;
@@ -12,10 +11,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-@Slf4j
 @Repository
 @RequiredArgsConstructor
-public class DaoGenreService implements DaoGenre {
+public class DaoGenreRepository implements DaoGenre {
     private final JdbcTemplate jdbcTemplate;
 
     public Optional<Genre> getGenreById(Long id) {
