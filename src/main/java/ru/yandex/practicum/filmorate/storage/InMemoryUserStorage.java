@@ -11,6 +11,7 @@ import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Optional;
 
 @Data
 @Component
@@ -20,19 +21,19 @@ public class InMemoryUserStorage implements UserStorage {
     private final HashMap<Long, User> users = new HashMap<>();
 
     @Override
-    public User createUser(User user) {
+    public Optional<User> saveUser(User user) {
         User validateUser = validUser(user);
         validateUser.setId(idUser);
         users.put(idUser++, validateUser);
-        return validateUser;
+        return Optional.of(validateUser);
     }
 
     @Override
-    public User updateUser(User user) {
+    public Optional<User> updateUser(User user) {
         if (users.containsKey(user.getId())) {
             User validateUser = validUser(user);
             users.put(validateUser.getId(), validateUser);
-            return validateUser;
+            return Optional.of(validateUser);
         } else {
             throw new MissingFriendException("Пользователя с таким id нет.");
         }
@@ -44,12 +45,12 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public User getUserById(Long id) {
+    public Optional<User> getUserById(Long id) {
         if (users.get(id) == null) {
             throw new MissingFriendException(String.format(
                     "Ошибка. Пользователя с id - %s не найдено.", id));
         }
-        return users.get(id);
+        return Optional.of(users.get(id));
     }
 
     private User validUser(User user) {

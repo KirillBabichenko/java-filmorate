@@ -1,37 +1,72 @@
 package ru.yandex.practicum.filmorate;
 
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import ru.yandex.practicum.filmorate.controller.FilmController;
-import ru.yandex.practicum.filmorate.exception.MissingFilmException;
+import ru.yandex.practicum.filmorate.controller.UserController;
+import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.model.User;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SpringBootTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class FilmControllerTest {
-    private FilmController filmController;
+    private final FilmController filmController;
+    private final UserController userController;
+    private User user;
     private Film film;
+    private Film secondFilm;
     private Validator validator;
-    private InMemoryFilmStorage inMemoryFilmStorage;
 
     @BeforeEach
     public void setUp() {
-        inMemoryFilmStorage = new InMemoryFilmStorage();
-        FilmService filmService = new FilmService(inMemoryFilmStorage);
-        filmController = new FilmController(inMemoryFilmStorage, filmService);
-        film = new Film("nisi eiusmod", "adipisicing", LocalDate.of(1967, 3, 25), 100);
+        film = Film.builder()
+                .name("nisi eiusmod")
+                .description("adipisicing")
+                .releaseDate(LocalDate.of(1967, 3, 25))
+                .duration(100)
+                .mpa(new Mpa(1, "G"))
+                .genres(new ArrayList<>())
+                .build();
+        secondFilm = Film.builder()
+                .name("updateFilm")
+                .description("updateFilm description")
+                .releaseDate(LocalDate.of(1977, 3, 25))
+                .duration(150)
+                .mpa(new Mpa(1, "G"))
+                .genres(new ArrayList<>())
+                .build();
+        user = User.builder()
+                .login("dolore")
+                .name("Nick Name")
+                .email("mail@mail.ru")
+                .birthday(LocalDate.of(1946, 8, 20))
+                .friends(new HashSet<>())
+                .unverifiedFriends(new HashSet<>())
+                .build();
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
     }
@@ -39,77 +74,76 @@ public class FilmControllerTest {
     @Test
     public void createFilmNormalTest() {
         filmController.createFilm(film);
+        film.setId(1L);
 
-        assertEquals(1, inMemoryFilmStorage.getFilms().size(), "Количество фильмов не совпадает");
-        assertEquals(film, inMemoryFilmStorage.getFilms().get(1L), "Фильмы не совпадают");
+        assertEquals(1, filmController.getAllFilms().size(), "Количество фильмов не совпадает");
+        assertTrue(filmController.getAllFilms().contains(film), "Фильмы не совпадают");
     }
 
     @Test
     public void createFilmFailNameTest() {
-        Film badFilm = new Film("", "adipisicing", LocalDate.of(1967, 3, 25), 100);
+        film.setName("");
 
-        Set<ConstraintViolation<Film>> violations = validator.validate(badFilm);
+        Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
     public void createFilmFailDescriptionTest() {
-        Film badFilm = new Film("Film", "Пятеро друзей ( комик-группа «Шарло»), " +
-                "приезжают в город Бризуль. Здесь они хотят разыскать господина Огюста Куглова, " +
-                "который задолжал им деньги, а именно 20 миллионов. о Куглов, который за время «своего отсутствия», " +
-                "стал кандидатом Коломбани.", LocalDate.of(1967, 3, 25), 100);
+        film.setDescription("Пятеро друзей ( комик-группа «Шарло»), приезжают в город Бризуль. " +
+                "Здесь они хотят разыскать господина Огюста Куглова, который задолжал им деньги, " +
+                "а именно 20 миллионов. о Куглов, который за время «своего отсутствия», " +
+                "стал кандидатом Коломбани.");
 
-        Set<ConstraintViolation<Film>> violations = validator.validate(badFilm);
+        Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
     public void createFilmFailReleaseDateTest() {
-        Film badFilm = new Film("Film", "Description", LocalDate.of(1825, 3, 25), 100);
+        film.setReleaseDate(LocalDate.of(1825, 3, 25));
 
         Assertions.assertThrows(ValidationException.class,
-                () -> filmController.createFilm(badFilm));
-        assertEquals(0, inMemoryFilmStorage.getFilms().size(), "Количество фильмов не совпадает");
+                () -> filmController.createFilm(film));
+        assertEquals(0, filmController.getAllFilms().size(), "Количество фильмов не совпадает");
     }
 
     @Test
     public void createFilmFailDurationTest() {
-        Film badFilm = new Film("Film", "Description", LocalDate.of(1925, 3, 25), -100);
+        film.setDuration(-100);
 
-        Set<ConstraintViolation<Film>> violations = validator.validate(badFilm);
+        Set<ConstraintViolation<Film>> violations = validator.validate(film);
         assertEquals(1, violations.size(), "Количество ошибок не совпадает");
     }
 
     @Test
     public void updateFilmNormalTest() {
-        Film updateFilm = new Film("Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
-        updateFilm.setId(1L);
+        secondFilm.setId(1L);
         filmController.createFilm(film);
-        filmController.updateFilm(updateFilm);
+        filmController.updateFilm(secondFilm);
 
-        assertEquals(1, inMemoryFilmStorage.getFilms().size(), "Количество фильмов не совпадает");
-        assertEquals(updateFilm, inMemoryFilmStorage.getFilms().get(1L), "Фильмы не совпадают");
+        assertEquals(1, filmController.getAllFilms().size(), "Количество фильмов не совпадает");
+        assertEquals(secondFilm, filmController.getFilmById(1L), "Фильмы не совпадают");
     }
 
     @Test
     public void updateUnknownFilmFailTest() {
-        Film updateFilm = new Film("Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
-        updateFilm.setId(9999L);
+        secondFilm.setId(9999L);
         filmController.createFilm(film);
+        film.setId(1L);
 
-        Assertions.assertThrows(MissingFilmException.class,
-                () -> filmController.updateFilm(updateFilm));
-        assertEquals(1, inMemoryFilmStorage.getFilms().size(), "Количество фильмов не совпадает");
-        assertEquals(film, inMemoryFilmStorage.getFilms().get(1L), "Фильмы не совпадают");
+        Assertions.assertThrows(DatabaseException.class,
+                () -> filmController.updateFilm(secondFilm));
+        assertEquals(1, filmController.getAllFilms().size(), "Количество фильмов не совпадает");
+        assertEquals(film, filmController.getFilmById(1L), "Фильмы не совпадают");
     }
 
     @Test
     public void getAllFilmsTest() {
-        Film newFilm = new Film("Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
         filmController.createFilm(film);
-        filmController.createFilm(newFilm);
-
+        filmController.createFilm(secondFilm);
         Collection<Film> allFilms = filmController.getAllFilms();
+        film.setId(1L);
 
         assertEquals(2, allFilms.size(), "Количество фильмов не совпадает");
         assertTrue(allFilms.contains(film), "Фильм не найден");
@@ -119,6 +153,7 @@ public class FilmControllerTest {
     public void getFilmByIdNormalTest() {
         filmController.createFilm(film);
         Film testFilm = filmController.getFilmById(1L);
+        film.setId(1L);
 
         assertEquals(film, testFilm, "Фильмы не совпадают");
     }
@@ -127,43 +162,51 @@ public class FilmControllerTest {
     public void getFilmByIdIncorrectIdTest() {
         filmController.createFilm(film);
 
-        Assertions.assertThrows(MissingFilmException.class,
-                () -> filmController.getFilmById(9999L), "Должна быть ошибка MissingFilmException");
+        Assertions.assertThrows(DatabaseException.class,
+                () -> filmController.getFilmById(9999L), "Должна быть ошибка DatabaseException");
     }
 
     @Test
     public void addLikeNormalTest() {
         filmController.createFilm(film);
-        filmController.addLike(1L, 1L);
+        filmController.createFilm(secondFilm);
+        userController.createUser(user);
+        filmController.addLike(2L, 1L);
+        secondFilm.setId(2L);
 
-        assertEquals(1, filmController.getFilmById(1L).getLikes().size(), "Количество лайков не совпадает");
-        assertTrue(filmController.getFilmById(1L).getLikes().contains(1L), "Должен быть лайк от пользователя с id = 1L");
+        assertTrue(filmController.getPopularFilms(1).contains(secondFilm),
+                "В списке должен быть secondFilm");
     }
 
     @Test
     public void deleteLikeNormalTest() {
         filmController.createFilm(film);
+        filmController.createFilm(secondFilm);
+        userController.createUser(user);
+        filmController.addLike(2L, 1L);
+        film.setId(1L);
+        secondFilm.setId(2L);
+        assertTrue(filmController.getPopularFilms(1).contains(secondFilm),
+                "В списке должен быть secondFilm");
+
         filmController.addLike(1L, 1L);
-        filmController.addLike(1L, 2L);
+        filmController.deleteLike(2L, 1L);
 
-        filmController.deleteLike(1L, 1L);
-
-        assertEquals(1, filmController.getFilmById(1L).getLikes().size(), "Количество лайков не совпадает");
-        assertFalse(filmController.getFilmById(1L).getLikes().contains(1L), "Не должгно быть лайка от пользователя с id = 1L");
+        assertTrue(filmController.getPopularFilms(1).contains(film),
+                "В списке должен быть film");
     }
 
     @Test
     public void getPopularFilmsNormalTest() {
         filmController.createFilm(film);
-        Film newFilm = new Film("Film Updated", "New film update description", LocalDate.of(1967, 3, 25), 100);
-        filmController.createFilm(newFilm);
-        filmController.addLike(1L, 1L);
-        filmController.addLike(1L, 2L);
-        filmController.addLike(2L, 2L);
+        filmController.createFilm(secondFilm);
+        userController.createUser(user);
+        filmController.addLike(2L, 1L);
+        secondFilm.setId(2L);
 
         Collection<Film> bestFilms = filmController.getPopularFilms(1);
 
         assertEquals(1, bestFilms.size(), "Количество лучших фильмов не совпадает");
-        assertTrue(bestFilms.contains(film), "Лучший фильм не совпадает");
+        assertTrue(bestFilms.contains(secondFilm), "Лучший фильм не совпадает");
     }
 }

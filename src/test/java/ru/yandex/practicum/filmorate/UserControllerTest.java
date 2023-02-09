@@ -1,16 +1,18 @@
 package ru.yandex.practicum.filmorate;
 
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import ru.yandex.practicum.filmorate.controller.UserController;
+import ru.yandex.practicum.filmorate.exception.DatabaseException;
 import ru.yandex.practicum.filmorate.exception.IncorrectParameterException;
-import ru.yandex.practicum.filmorate.exception.MissingFriendException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
@@ -21,26 +23,38 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@SpringBootTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class UserControllerTest {
-    private UserController userController;
+    private final UserController userController;
     private User user;
+    private User secondUser;
     private Validator validator;
-    private InMemoryUserStorage inMemoryUserStorage;
 
     @BeforeEach
     public void setUp() {
-        inMemoryUserStorage = new InMemoryUserStorage();
-        UserService userService = new UserService(inMemoryUserStorage);
-        userController = new UserController(inMemoryUserStorage, userService);
-
         user = User.builder()
                 .login("dolore")
                 .name("Nick Name")
                 .email("mail@mail.ru")
                 .birthday(LocalDate.of(1946, 8, 20))
                 .friends(new HashSet<>())
+                .unverifiedFriends(new HashSet<>())
+                .build();
+        secondUser = User.builder()
+                .id(1L)
+                .login("Ivan")
+                .name("Grozny")
+                .email("mail@mail.ru")
+                .birthday(LocalDate.of(1946, 8, 20))
+                .friends(new HashSet<>())
+                .unverifiedFriends(new HashSet<>())
                 .build();
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
@@ -49,9 +63,10 @@ public class UserControllerTest {
     @Test
     public void createUserNormalTest() {
         userController.createUser(user);
+        user.setId(1L);
 
-        assertEquals(1, inMemoryUserStorage.getUsers().size(), "Количество пользователей не совпадает");
-        assertEquals(user, inMemoryUserStorage.getUsers().get(1L), "Пользователи не совпадают");
+        assertEquals(1, userController.getAllUsers().size(), "Количество пользователей не совпадает");
+        assertEquals(user, userController.getUserById(1L), "Пользователи не совпадают");
     }
 
     @Test
@@ -62,10 +77,11 @@ public class UserControllerTest {
                 .email("mail@mail.ru")
                 .birthday(LocalDate.of(1946, 8, 20))
                 .build();
+        badUser.setId(1L);
 
         Assertions.assertThrows(ValidationException.class,
                 () -> userController.createUser(badUser));
-        assertEquals(0, inMemoryUserStorage.getUsers().size(), "Количество пользователей не совпадает");
+        assertEquals(0, userController.getAllUsers().size(), "Количество пользователей не совпадает");
     }
 
     @Test
@@ -90,8 +106,8 @@ public class UserControllerTest {
                 .build();
         userController.createUser(badUser);
 
-        assertEquals(1, inMemoryUserStorage.getUsers().size(), "Количество пользователей не совпадает");
-        assertEquals("dolore", inMemoryUserStorage.getUsers().get(1L).getName(), "Имя пользователя не совпадает");
+        assertEquals(1, userController.getAllUsers().size(), "Количество пользователей не совпадает");
+        assertEquals("dolore", userController.getUserById(1L).getName(), "Имя пользователя не совпадает");
     }
 
     @Test
@@ -122,48 +138,31 @@ public class UserControllerTest {
 
     @Test
     public void updateUserNormalTest() {
-        User secondUser = User.builder()
-                .id(1L)
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .build();
+        secondUser.setId(1L);
         userController.createUser(user);
         userController.updateUser(secondUser);
 
-        assertEquals(1, inMemoryUserStorage.getUsers().size(), "Количество пользователей не совпадает");
-        assertEquals(secondUser, inMemoryUserStorage.getUsers().get(1L), "Пользователи не совпадают");
+        assertEquals(1, userController.getAllUsers().size(), "Количество пользователей не совпадает");
+        assertEquals(secondUser, userController.getUserById(1L), "Пользователи не совпадают");
     }
 
     @Test
     public void updateUnknownUserTest() {
-        User secondUser = User.builder()
-                .id(9999L)
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .build();
+        secondUser.setId(9999L);
         userController.createUser(user);
+        user.setId(1L);
 
-        Assertions.assertThrows(MissingFriendException.class,
-                () -> userController.updateUser(secondUser));
-        assertEquals(1, inMemoryUserStorage.getUsers().size(), "Количество пользователей не совпадает");
-        assertEquals(user, inMemoryUserStorage.getUsers().get(1L), "Пользователи не совпадают");
+        Assertions.assertThrows(DatabaseException.class,
+                () -> userController.updateUser(secondUser), "Должна быть ошибка DatabaseException");
+        assertEquals(1, userController.getAllUsers().size(), "Количество пользователей не совпадает");
+        assertEquals(user, userController.getUserById(1L), "Пользователи не совпадают");
     }
 
     @Test
     public void getAllUserTest() {
-        User secondUser = User.builder()
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .build();
         userController.createUser(user);
         userController.createUser(secondUser);
-
+        user.setId(1L);
         Collection<User> allUsers = userController.getAllUsers();
 
         assertEquals(2, allUsers.size(), "Количество пользователей не совпадает");
@@ -173,6 +172,7 @@ public class UserControllerTest {
     @Test
     public void getUserByIdNormalTest() {
         userController.createUser(user);
+        user.setId(1L);
         User testUser = userController.getUserById(1L);
 
         assertEquals(user, testUser, "Пользователи не совпадают");
@@ -182,30 +182,24 @@ public class UserControllerTest {
     public void getUserByIdIncorrectIdTest() {
         userController.createUser(user);
 
-        Assertions.assertThrows(MissingFriendException.class,
-                () -> userController.getUserById(9999L), "Должна быть ошибка MissingFriendException");
+        Assertions.assertThrows(DatabaseException.class,
+                () -> userController.getUserById(9999L), "Должна быть ошибка DatabaseException");
     }
 
     @Test
     public void addFriendNormalTest() {
-        User secondUser = User.builder()
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .friends(new HashSet<>())
-                .build();
         userController.createUser(user);
         userController.createUser(secondUser);
-
+        user.setId(1L);
+        secondUser.setId(2L);
         userController.addFriend(1L, 2L);
 
-        assertTrue(inMemoryUserStorage.getUsers().get(1L).getFriends().contains(2L),
+        assertTrue(userController.getFriends(1L).contains(secondUser),
                 "В списке друзей пользователя c id = 1L должен быть пользователь с id = 2L");
-        assertTrue(inMemoryUserStorage.getUsers().get(2L).getFriends().contains(1L),
-                "В списке друзей пользователя c id = 2L должен быть пользователь с id = 1L");
-        assertEquals(1, inMemoryUserStorage.getUsers().get(2L).getFriends().size(),
-                "В списке друзей должен быть один пользователь");
+        assertFalse(userController.getFriends(2L).contains(user),
+                "В списке друзей пользователя c id = 2L не должно быть пользователя с id = 1L");
+        assertEquals(0, userController.getFriends(2L).size(),
+                "Список друзей пользователя id = 2L должен быть пуст");
     }
 
     @Test
@@ -220,44 +214,31 @@ public class UserControllerTest {
     public void addFriendIncorrectIdTest() {
         userController.createUser(user);
 
-        Assertions.assertThrows(MissingFriendException.class,
-                () -> userController.addFriend(1L, 2L), "Должна быть ошибка MissingFriendException");
+        Assertions.assertThrows(DatabaseException.class,
+                () -> userController.addFriend(1L, 2L), "Должна быть ошибка DatabaseException");
     }
 
     @Test
     public void deleteFriendNormalTest() {
-        User secondUser = User.builder()
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .friends(new HashSet<>())
-                .build();
         userController.createUser(user);
         userController.createUser(secondUser);
 
         userController.addFriend(1L, 2L);
-        assertEquals(1, inMemoryUserStorage.getUsers().get(2L).getFriends().size(),
+        assertEquals(1, userController.getFriends(1L).size(),
                 "В списке друзей должен быть один пользователь");
 
         userController.deleteFriend(1L, 2L);
-        assertEquals(0, inMemoryUserStorage.getUsers().get(1L).getFriends().size(),
+        assertEquals(0, userController.getFriends(1L).size(),
                 "Список друзей пользователя id =1L должен быть пуст");
-        assertEquals(0, inMemoryUserStorage.getUsers().get(2L).getFriends().size(),
+        assertEquals(0, userController.getFriends(2L).size(),
                 "Список друзей пользователя id =2L должен быть пуст");
     }
 
     @Test
     public void getFriendsNormalTest() {
-        User secondUser = User.builder()
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .friends(new HashSet<>())
-                .build();
         userController.createUser(user);
         userController.createUser(secondUser);
+        secondUser.setId(2L);
         userController.addFriend(1L, 2L);
         Collection<User> listFriends = userController.getFriends(1L);
 
@@ -275,28 +256,21 @@ public class UserControllerTest {
 
     @Test
     public void getCommonFriendsNormalTest() {
-        User secondUser = User.builder()
-                .login("Ivan")
-                .name("Grozny")
-                .email("mail@mail.ru")
-                .birthday(LocalDate.of(1946, 8, 20))
-                .friends(new HashSet<>())
-                .build();
         User thirdUser = User.builder()
                 .login("Ivan")
                 .name("Grozny")
                 .email("mail@mail.ru")
                 .birthday(LocalDate.of(1946, 8, 20))
                 .friends(new HashSet<>())
+                .unverifiedFriends(new HashSet<>())
                 .build();
         userController.createUser(user);
         userController.createUser(secondUser);
         userController.createUser(thirdUser);
+        thirdUser.setId(3L);
 
-        userController.addFriend(1L, 2L);
         userController.addFriend(1L, 3L);
         userController.addFriend(2L, 3L);
-
         Collection<User> commonFriends = userController.getCommonFriends(1L, 2L);
 
         assertEquals(1, commonFriends.size(),
